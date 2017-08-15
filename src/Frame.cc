@@ -261,12 +261,12 @@ void Frame::SetPose(cv::Mat Tcw)
     UpdatePoseMatrices();//更新位姿矩阵
 }
 
-void Frame::UpdatePoseMatrices()
+void Frame::UpdatePoseMatrices()//更新R,T,O（相机中心）
 { 
-    mRcw = mTcw.rowRange(0,3).colRange(0,3);//
-    mRwc = mRcw.t();
-    mtcw = mTcw.rowRange(0,3).col(3);
-    mOw = -mRcw.t()*mtcw;//Ow其实是世界参考系（第一帧）原点（相机光心）在当前帧参考系（相机坐标系）中的坐标，等价于twc，运行ORB时界面上有个Follow Camera选项，选上后，相机在界面中的位置固定，这时就需要这个Ow来计算第一帧的坐标．
+    mRcw = mTcw.rowRange(0,3).colRange(0,3);//空间点的世界坐标到相机坐标的旋转矩阵
+    mRwc = mRcw.t();//上一行转置，得空间点的相机坐标到世界坐标的旋转矩阵
+    mtcw = mTcw.rowRange(0,3).col(3);//世界到相机的平移向量
+    mOw = -mRcw.t()*mtcw;//Ow是世界坐标系（第一帧）原点（相机光心）在当前帧参考系（相机坐标系）中的坐标，等价于twc，运行ORB时界面上有个Follow Camera选项，选上后，相机在界面中的位置固定，这时就需要这个Ow来计算第一帧的坐标．
 }
 
 bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
@@ -274,21 +274,21 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
     pMP->mbTrackInView = false;
 
     // 3D in absolute coordinates
-    cv::Mat P = pMP->GetWorldPos(); 
+    cv::Mat P = pMP->GetWorldPos(); //空间点的世界坐标
 
     // 3D in camera coordinates
-    const cv::Mat Pc = mRcw*P+mtcw;
+    const cv::Mat Pc = mRcw*P+mtcw;//空间点的相机坐标
     const float &PcX = Pc.at<float>(0);
     const float &PcY= Pc.at<float>(1);
     const float &PcZ = Pc.at<float>(2);
 
     // Check positive depth
-    if(PcZ<0.0f)
+    if(PcZ<0.0f)//检查深度是否为正
         return false;
 
     // Project in image and check it is not outside
     const float invz = 1.0f/PcZ;
-    const float u=fx*PcX*invz+cx;
+    const float u=fx*PcX*invz+cx;//相机坐标转换成像素坐标
     const float v=fy*PcY*invz+cy;
 
     if(u<mnMinX || u>mnMaxX)
