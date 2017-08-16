@@ -98,7 +98,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     //初始化标定计算矩阵，只在第一帧画面时运行
     if(mbInitialComputations)
     {
-        ComputeImageBounds(imLeft);//计算左边图像的边界信息（用于矫正畸变）
+        ComputeImageBounds(imLeft);//计算左边图像经过矫正畸变之后的图像范围
 
         mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/(mnMaxX-mnMinX);
         mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/(mnMaxY-mnMinY);
@@ -264,12 +264,14 @@ void Frame::SetPose(cv::Mat Tcw)
 void Frame::UpdatePoseMatrices()//更新R,T,O（相机中心）
 { 
     mRcw = mTcw.rowRange(0,3).colRange(0,3);//空间点的世界坐标到相机坐标的旋转矩阵
-    mRwc = mRcw.t();//上一行转置，得空间点的相机坐标到世界坐标的旋转矩阵
+    mRwc = mRcw.t();//上一行转置，方便计算mOw
     mtcw = mTcw.rowRange(0,3).col(3);//世界到相机的平移向量
-    mOw = -mRcw.t()*mtcw;//Ow是世界坐标系（第一帧）原点（相机光心）在当前帧参考系（相机坐标系）中的坐标，等价于twc，运行ORB时界面上有个Follow Camera选项，选上后，相机在界面中的位置固定，这时就需要这个Ow来计算第一帧的坐标．
+    mOw = -mRcw.t()*mtcw;//相当于mRcw.t()*(-mtcw)=mRwc*mtwc
+    // Ow是世界坐标系（第一帧）原点（相机光心）在当前帧参考系（相机坐标系）中的坐标，等价于twc，运行ORB时界面上有个Follow Camera选项，选上后，相机在界面中的位置固定，这时就需要这个Ow来计算第一帧的坐标．
 }
 
-bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
+bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)//检查地图点在相机视锥里？
+    //视锥体（frustum），是指场景中相机的可见的一个锥体范围。它有上、下、左、右、近、远，共6个面组成。在视锥体内的景物可见，反之则不可见。
 {
     pMP->mbTrackInView = false;
 
@@ -283,7 +285,7 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
     const float &PcZ = Pc.at<float>(2);
 
     // Check positive depth
-    if(PcZ<0.0f)//检查深度是否为正
+    if(PcZ<0.0f)//检查深度为正？
         return false;
 
     // Project in image and check it is not outside
@@ -291,7 +293,7 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
     const float u=fx*PcX*invz+cx;//相机坐标转换成像素坐标
     const float v=fy*PcY*invz+cy;
 
-    if(u<mnMinX || u>mnMaxX)
+    if(u<mnMinX || u>mnMaxX)//检查在上下左右四面内?
         return false;
     if(v<mnMinY || v>mnMaxY)
         return false;
@@ -327,7 +329,7 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
     return true;
 }
 
-vector<size_t> Frame::GetFeaturesInArea(const float &x, const float  &y, const float  &r, const int minLevel, const int maxLevel) const
+vector<size_t> Frame::GetFeaturesInArea(const float &x, const float  &y, const float  &r, const int minLevel, const int maxLevel) const//提取区域内的所有特征点
 {
     vector<size_t> vIndices;
     vIndices.reserve(N);
