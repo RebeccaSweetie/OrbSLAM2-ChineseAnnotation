@@ -99,17 +99,18 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     if(mbInitialComputations)
     {
         ComputeImageBounds(imLeft);//计算左边图像经过矫正畸变之后的图像范围
-
+     //为了让特征点分布均匀、将图片分格时，每个网格的宽度、长度取逆
         mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/(mnMaxX-mnMinX);
         mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/(mnMaxY-mnMinY);
-
+    //相机内参
         fx = K.at<float>(0,0);
         fy = K.at<float>(1,1);
         cx = K.at<float>(0,2);
         cy = K.at<float>(1,2);
+    //取逆运算
         invfx = 1.0f/fx;
         invfy = 1.0f/fy;
-
+    //初始化完成后，把flag改写
         mbInitialComputations=false;
     }
 
@@ -270,7 +271,7 @@ void Frame::UpdatePoseMatrices()//更新R,T,O（相机中心）
     // Ow是世界坐标系（第一帧）原点（相机光心）在当前帧参考系（相机坐标系）中的坐标，等价于twc，运行ORB时界面上有个Follow Camera选项，选上后，相机在界面中的位置固定，这时就需要这个Ow来计算第一帧的坐标．
 }
 
-bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)//检查地图点在相机视锥里？
+bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)//检查地图点是否在相机视锥里
     //视锥体（frustum），是指场景中相机的可见的一个锥体范围。它有上、下、左、右、近、远，共6个面组成。在视锥体内的景物可见，反之则不可见。
 {
     pMP->mbTrackInView = false;
@@ -285,7 +286,7 @@ bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)//检查地图点�
     const float &PcZ = Pc.at<float>(2);
 
     // Check positive depth
-    if(PcZ<0.0f)//检查深度为正？
+    if(PcZ<0.0f)//检查深度是否为正
         return false;
 
     // Project in image and check it is not outside
@@ -440,6 +441,7 @@ void Frame::UndistortKeyPoints()
 
 void Frame::ComputeImageBounds(const cv::Mat &imLeft)
 {
+    // 如果是畸变图像
     if(mDistCoef.at<float>(0)!=0.0)
     {
         cv::Mat mat(4,2,CV_32F);

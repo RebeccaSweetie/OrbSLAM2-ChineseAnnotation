@@ -118,10 +118,10 @@ public:
     static float invfy;
     cv::Mat mDistCoef;
 
-    // Stereo baseline multiplied by fx.
+    // 双目的基线长度乘以相机参数fx.
     float mbf;
 
-    // Stereo baseline in meters.
+    // 双目的基线长度（单位m）
     float mb;
 
     // Threshold close/far points. Close points are inserted from 1 view.
@@ -156,21 +156,24 @@ public:
     std::vector<bool> mvbOutlier;
 
     // Keypoints are assigned to cells in a grid to reduce matching complexity when projecting MapPoints.
+    // 让图片中特征点分布均匀，所以将图像分成网格，对每个部分进行特征点提取
     static float mfGridElementWidthInv;
     static float mfGridElementHeightInv;
     std::vector<std::size_t> mGrid[FRAME_GRID_COLS][FRAME_GRID_ROWS];
 
-    // Camera pose.
+    // 相机位姿
     cv::Mat mTcw;
 
-    // Current and Next Frame id.
+    // 当前帧和下一帧的id
     static long unsigned int nNextId;
     long unsigned int mnId;
 
     // Reference Keyframe.
+    // 用作参考的关键帧
     KeyFrame* mpReferenceKF;
 
     // Scale pyramid info.
+    // 图像金字塔参数信息
     int mnScaleLevels;
     float mfScaleFactor;
     float mfLogScaleFactor;
@@ -180,6 +183,7 @@ public:
     vector<float> mvInvLevelSigma2;
 
     // Undistorted Image Bounds (computed once).
+    // 去畸变后的相机图像
     static float mnMinX;
     static float mnMaxX;
     static float mnMinY;
